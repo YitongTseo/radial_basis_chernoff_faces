@@ -1,0 +1,8 @@
+First find your Blender python executable: 
+
+Go to your Blender’s scripting tab and run:
+    import sys
+    print(sys.executable)
+
+For me it's:
+/Applications/Blender.app/Contents/Resources/4.4/python/bin/python3.11

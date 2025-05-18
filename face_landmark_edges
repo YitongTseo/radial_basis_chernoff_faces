@@ -1,0 +1,19 @@
+# Suggested not to change:
+# Any peripherals, any of the "inside", upper_mouth_creases, 
+
+Nose_Tip: [Nose_Middle,Nose_Bottom, Nose_Corners_Above, Nostril_Tops]
+Nose_Bottom: 
+
+Nose_Tip,Nose_Bottom
+Nose_Tip,Nose_Corners_Above
+Nose_Corners_Above,Nose_Corners_Below
+Nostril_Tops,Nose_Corners_Above
+Nostril_Tops,Nose_Corners_Below
+Nostril_Tops,Nose_Tip
+Nostril_Tops,Nose_Bottom
+Nostril_Tops,Nose_Middle
+Glasses_Rests,Nose_Middle
+Glasses_Rests,Nostril_Tops
+
+Glasses_Rests,Glasses_Rests_Top
+Nose_Root,Glasses_Rests_Top
