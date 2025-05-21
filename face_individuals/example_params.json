@@ -198,5 +198,9 @@
   "Below_Lips": {
     "direction": [0.1, -0.55, -0.25],
     "magnitude": 0.09
+  },
+  "Last_Group": {
+    "direction": [0.1, -0.7, 0.3],
+    "magnitude": 0.12
   }
 }
