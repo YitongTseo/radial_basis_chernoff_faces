@@ -5,7 +5,8 @@
 Basic usage:
 
 ```bash
-/Applications/Blender.app/Contents/MacOS/Blender --background --python blender_rbf_script.py -- --input face_landmark_points.blend --dither_config example_params.json --output output.blend
+/Applications/Blender.app/Contents/MacOS/Blender --background --python blender_rbf_script.py -- --input face_landmark_points.blend --dither_config face_individuals/example_params.json --output output.blend
+
 ```
 
 ### Command Line Arguments
@@ -114,6 +115,12 @@ To apply specific dithering to eyebrows and nose:
 
 
 #!/usr/bin/env python3
+import sys
+import site
+
+# Add user site-packages for scipy
+site.USER_SITE = '/Users/yitong/.local/lib/python3.11/site-packages'
+sys.path.append(site.USER_SITE)
 import bpy
 import bmesh
 import sys
@@ -126,6 +133,7 @@ import random
 from mathutils import Vector
 from scipy.interpolate import RBFInterpolator
 from scipy.spatial.distance import pdist
+import struct
 
 # === ARGUMENT PARSING ===
 def get_args():
@@ -159,6 +167,18 @@ def get_args():
     return args
 
 # === HELPER FUNCTIONS ===
+
+def enable_addon(addon_name):
+    """Enable an addon if it isn't already enabled."""
+    try:
+        # Try to enable the addon
+        bpy.ops.preferences.addon_enable(module=addon_name)
+        print(f"Enabled addon: {addon_name}")
+        return True
+    except Exception as e:
+        print(f"Error enabling addon {addon_name}: {e}")
+        return False
+
 def get_vertex_world_position(obj, index):
     return obj.matrix_world @ obj.data.vertices[index].co
 
@@ -201,6 +221,10 @@ def main():
     with open(args.dither_config, 'r') as f:
         dither_config = json.load(f)
     
+    # if not export_stl_path and "_config" in dither_config and dither_config["_config"].get("export_stl", False):
+    # If enabled in config but no path given, use the output path with .stl extension
+    export_stl_path = os.path.splitext(args.output)[0] + ".stl"
+    
     # Parse exempt keywords
     EXEMPT_KEYWORDS = [keyword.strip() for keyword in args.exempt_keywords.split(',')]
     SYMMETRY_THRESHOLD = args.symmetry_threshold
@@ -210,8 +234,26 @@ def main():
     # Ensure we're in Object Mode
     bpy.ops.object.mode_set(mode='OBJECT')
     
-    # Get the face object
-    obj = bpy.data.objects["Yitong_Face"]
+    # Get the face object - make sure it exists first
+    face_obj = None
+    for obj in bpy.data.objects:
+        if "Yitong_Face" in obj.name:
+            face_obj = obj
+            print(f"Found face object: {obj.name}")
+            break
+    
+    if not face_obj:
+        print("Error: Could not find 'Yitong_Face' object. Available objects:")
+        for obj in bpy.data.objects:
+            print(f"  - {obj.name}")
+        raise ValueError("Face object not found")
+    
+    # Select the face object and make it active
+    bpy.ops.object.select_all(action='DESELECT')
+    face_obj.select_set(True)
+    bpy.context.view_layer.objects.active = face_obj
+    
+    obj = face_obj
     mesh = obj.data
     verts = mesh.vertices
     
@@ -329,9 +371,16 @@ def main():
     original_positions = np.array(original_positions)
     dithered_positions = np.array(dithered_positions)
     
-    # Skip deformation if no points were dithered
+    # Check if deformation should be applied
+    apply_deformation = True
+    if "_config" in dither_config:
+        apply_deformation = dither_config["_config"].get("apply_deformation", True)
+    
+    # Skip deformation if no points were dithered or deformation is disabled
     if len(original_positions) == 0:
         print("⚠️ No vertices to process. No deformation applied.")
+    elif not apply_deformation:
+        print("⚠️ Deformation disabled in configuration. No deformation applied.")
     else:
         displacements = dithered_positions - original_positions
         
@@ -343,27 +392,130 @@ def main():
             original_positions = original_positions + jitter
         
         # Create RBF interpolator with some smoothing to help with numerical stability
-        rbf = RBFInterpolator(
-            original_positions,
-            displacements,
-            kernel='thin_plate_spline',
-            degree=0,
-            smoothing=1e-4
-        )
-        
-        # Apply deformation to all vertices
-        for v in mesh.vertices:
-            pos = obj.matrix_world @ v.co
-            displacement = rbf([[pos.x, pos.y, pos.z]])[0]
-            v.co.x += displacement[0]
-            v.co.y += displacement[1]
-            v.co.z += displacement[2]
-        
-        print("✅ RBF deformation applied.")
+        try:
+            rbf = RBFInterpolator(
+                original_positions,
+                displacements,
+                kernel='thin_plate_spline',
+                degree=0,
+                smoothing=1e-4
+            )
+            
+            # Apply deformation to all vertices in object local space
+            for v in mesh.vertices:
+                world_pos = obj.matrix_world @ v.co
+                world_pos_array = np.array([[world_pos.x, world_pos.y, world_pos.z]])
+                displacement = rbf(world_pos_array)[0]
+                
+                # Update the vertex position (in object space)
+                world_new_pos = Vector((
+                    world_pos.x + displacement[0],
+                    world_pos.y + displacement[1],
+                    world_pos.z + displacement[2]
+                ))
+                
+                # Convert back to local space
+                v.co = obj.matrix_world.inverted() @ world_new_pos
+            
+            # Update the mesh
+            mesh.update()
+            print("✅ RBF deformation applied.")
+        except Exception as e:
+            print(f"❌ Error applying RBF deformation: {e}")
     
-    # Save the result
-    bpy.ops.wm.save_as_mainfile(filepath=args.output)
-    print(f"✅ Saved modified blend file to {args.output}")
+    # === STEP 5: Save the Blender file ===
+    try:
+        # Apply all modifiers first if there are any
+        if obj.modifiers:
+            for modifier in obj.modifiers:
+                bpy.ops.object.modifier_apply(modifier=modifier.name)
+            print("✅ Applied all modifiers")
+        
+        # Save the blender file
+        bpy.ops.wm.save_as_mainfile(filepath=args.output)
+        print(f"✅ Saved modified blend file to {args.output}")
+    except Exception as e:
+        print(f"❌ Error saving file: {e}")
+
+
+    # # === STEP 4: Export STL if requested ===
+    # print(f"Exporting STL to {export_stl_path}")
+    # # Make sure the face object is selected and active
+    # bpy.ops.object.select_all(action='DESELECT')
+    # obj.select_set(True)
+    # bpy.context.view_layer.objects.active = obj
+    # enable_addon("io_mesh_stl")
+    # # Export as STL
+    # try:
+    #     # First, ensure the STL export addon is enabled
+    #     bpy.ops.preferences.addon_enable(module="io_mesh_stl")
+        
+    #     # Try the export operation - Blender 2.8+ version
+    #     try:
+    #         bpy.ops.export_mesh.stl(
+    #             filepath=export_stl_path,
+    #             use_selection=True,
+    #             global_scale=1.0,
+    #             use_scene_unit=True,
+    #             ascii=False,
+    #             use_mesh_modifiers=True
+    #         )
+    #         print(f"✅ STL exported to {export_stl_path}")
+    #     except AttributeError:
+    #         # Fallback for older Blender versions
+    #         bpy.ops.export_mesh.stl(
+    #             filepath=export_stl_path,
+    #             check_existing=True,
+    #             filter_glob="*.stl",
+    #             use_selection=True,
+    #             global_scale=1.0,
+    #             use_scene_unit=True,
+    #             ascii=False
+    #         )
+    #         print(f"✅ STL exported to {export_stl_path} (using legacy exporter)")
+    # except Exception as e:
+    #     print(f"❌ Failed to export STL: {e}")
+    #     print("Attempting alternative export method...")
+        
+    #     # Try a direct mesh export if the operator fails
+    #     try:
+    #         import bmesh
+    #         from mathutils import Matrix
+            
+    #         # Create a bmesh from the object
+    #         bm = bmesh.new()
+    #         bm.from_mesh(obj.data)
+            
+    #         # Apply object transformation to vertices
+    #         for v in bm.verts:
+    #             v.co = obj.matrix_world @ v.co
+            
+    #         # Write STL file directly
+    #         with open(export_stl_path, 'wb') as fp:
+    #             # Write STL header (80 bytes)
+    #             fp.write(b'Binary STL file generated by Blender script' + b'\0' * 48)
+                
+    #             # Write number of triangles (4 bytes)
+    #             num_faces = len(bm.faces)
+    #             fp.write(num_faces.to_bytes(4, byteorder='little'))
+                
+    #             # Write each triangle
+    #             for f in bm.faces:
+    #                 # Write normal (12 bytes)
+    #                 normal = f.normal
+    #                 fp.write(struct.pack('<fff', normal.x, normal.y, normal.z))
+                    
+    #                 # Write vertices (36 bytes)
+    #                 for v in f.verts:
+    #                     fp.write(struct.pack('<fff', v.co.x, v.co.y, v.co.z))
+                    
+    #                 # Write attribute byte count (2 bytes)
+    #                 fp.write(b'\0\0')
+            
+    #         bm.free()
+    #         print(f"✅ STL exported to {export_stl_path} (using direct method)")
+    #     except Exception as manual_err:
+    #         print(f"❌ All STL export methods failed: {manual_err}")
 
 if __name__ == "__main__":
     # Add user site-packages for scipy

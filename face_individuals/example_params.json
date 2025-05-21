@@ -4,200 +4,199 @@
     "magnitude": 0.0
   },
   "Under_Chin": {
-    "direction": [0, -0.5, -0.2],
+    "direction": [0.1, -0.7, 0.3],
+    "magnitude": 0.12
+  },
+  "Bottom_Corners": {
+    "direction": [-0.2, -0.4, 0.1],
+    "magnitude": 0.09
+  },
+  "Chin_Butt": {
+    "direction": [0.05, -0.6, -0.15],
+    "magnitude": 0.07
+  },
+  "Chin_Sides": {
+    "direction": [0.3, -0.3, -0.1],
+    "magnitude": 0.11
+  },
+  "Chin_Tip": {
+    "direction": [-0.1, -0.45, -0.25],
+    "magnitude": 5
+  },
+  "Upper_Mouth_Creases": {
+    "direction": [0.15, -0.55, -0.1],
+    "magnitude": 5
+  },
+  "Upper_Lip_Sides": {
+    "direction": [-0.15, -0.6, -0.3],
+    "magnitude": 0.05
+  },
+  "Top_Middle": {
+    "direction": [0, -0.35, -0.4],
+    "magnitude": 5
+  },
+  "Third_Eye": {
+    "direction": [0, -0.7, -0.1],
+    "magnitude": 0.07
+  },
+  "Skull_Corners": {
+    "direction": [0.25, -0.4, -0.35],
+    "magnitude": 0.12
+  },
+  "Nostril_Tops": {
+    "direction": [-0.05, -0.65, -0.15],
+    "magnitude": 0.09
+  },
+  "Nose_Tip": {
+    "direction": [0.1, -0.3, -0.4],
+    "magnitude": 0.11
+  },
+  "Nose_Stem_Corners": {
+    "direction": [-0.2, -0.5, -0.3],
     "magnitude": 0.08
   },
-"Bottom_Corners": {
-    "direction": [0, -0.5, -0.2],
+  "Nose_Smack_Dap_Middle": {
+    "direction": [0, -0.55, -0.35],
+    "magnitude": 0.13
+  },
+  "Nose_Sides_Higher": {
+    "direction": [0.3, -0.4, -0.2],
+    "magnitude": 0.06
+  },
+  "Nose_Sides": {
+    "direction": [0.35, -0.45, -0.1],
+    "magnitude": 0.1
+  },
+  "Nose_Root": {
+    "direction": [-0.1, -0.6, -0.25],
+    "magnitude": 0.07
+  },
+  "Nose_Middle": {
+    "direction": [0.05, -0.5, -0.3],
+    "magnitude": 0.09
+  },
+  "Nose_Corners_Below": {
+    "direction": [0.25, -0.35, -0.15],
+    "magnitude": 0.11
+  },
+  "Nose_Corners_Above": {
+    "direction": [-0.15, -0.45, -0.25],
+    "magnitude": 0.05
+  },
+  "Nose_Bridge": {
+    "direction": [0, -0.7, -0.15],
     "magnitude": 0.08
   },
-"Chin_Butt": {
-    "direction": [0, -0.5, -0.2],
+  "Nose_Bottom": {
+    "direction": [0.1, -0.4, -0.35],
+    "magnitude": 0.12
+  },
+  "Mouth_Top_Corners": {
+    "direction": [-0.2, -0.6, -0.1],
+    "magnitude": 0.09
+  },
+  "Mid_Cheek": {
+    "direction": [0.3, -0.45, -0.3],
+    "magnitude": 0.07
+  },
+  "Lower_Lip_Sides": {
+    "direction": [0.15, -0.55, -0.25],
+    "magnitude": 0.1
+  },
+  "Lip_Top_Corners": {
+    "direction": [-0.1, -0.65, -0.2],
+    "magnitude": 0.06
+  },
+  "Lip_Top": {
+    "direction": [0, -0.5, -0.3],
+    "magnitude": 0.09
+  },
+  "Lip_Bottom_of_Bottom": {
+    "direction": [0.05, -0.4, -0.15],
+    "magnitude": 0.11
+  },
+  "Jowls": {
+    "direction": [0.25, -0.6, -0.1],
     "magnitude": 0.08
   },
-"Chin_Sides": {
-    "direction": [0, -0.5, -0.2],
+  "Inner_Eyebrow_Crease": {
+    "direction": [-0.05, -0.55, -0.3],
+    "magnitude": 0.07
+  },
+  "Glasses_Rests_Top": {
+    "direction": [0.1, -0.7, -0.25],
+    "magnitude": 0.1
+  },
+  "Glasses_Rests": {
+    "direction": [0.3, -0.45, -0.2],
+    "magnitude": 0.09
+  },
+  "Funny_Mouth_Creases": {
+    "direction": [-0.15, -0.5, -0.1],
+    "magnitude": 0.12
+  },
+  "Eyelid_tops": {
+    "direction": [0.2, -0.6, -0.3],
+    "magnitude": 0.07
+  },
+  "EyeLid_bottom_corners": {
+    "direction": [-0.1, -0.45, -0.25],
+    "magnitude": 0.1
+  },
+  "Eyebrow_Under": {
+    "direction": [0.15, -0.55, -0.15],
     "magnitude": 0.08
   },
-"Chin_Tip": {
-    "direction": [0, -0.5, -0.2],
+  "Eyebrow_Ridge_Middle": {
+    "direction": [0, -0.65, -0.2],
+    "magnitude": 0.11
+  },
+  "Eyebrow_Inside_Corners": {
+    "direction": [-0.2, -0.5, -0.3],
+    "magnitude": 0.06
+  },
+  "Eyebrow_Corners": {
+    "direction": [0.25, -0.4, -0.1],
+    "magnitude": 0.13
+  },
+  "Eyebrow_Arches": {
+    "direction": [-0.05, -0.6, -0.25],
+    "magnitude": 0.07
+  },
+  "Eyebrow_Above": {
+    "direction": [0.1, -0.55, -0.2],
+    "magnitude": 0.09
+  },
+  "Eye_Lid_Bottoms": {
+    "direction": [0.3, -0.5, -0.3],
     "magnitude": 0.08
   },
-"Upper_Mouth_Creases": {
-    "direction": [0, -0.5, -0.2],
+  "Eye_Inner_Corners": {
+    "direction": [-0.1, -0.65, -0.15],
+    "magnitude": 0.1
+  },
+  "Chin_Contours": {
+    "direction": [0.05, -0.45, -0.25],
+    "magnitude": 0.12
+  },
+  "Cheek_Middle": {
+    "direction": [0.2, -0.55, -0.3],
+    "magnitude": 0.07
+  },
+  "Cheek_bones": {
+    "direction": [-0.15, -0.5, -0.2],
+    "magnitude": 0.11
+  },
+  "Cheek_Bone_Sides": {
+    "direction": [0.25, -0.6, -0.1],
     "magnitude": 0.08
   },
-"Upper_Lip_Sides": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
+  "Cheek_Bone_Ridges": {
+    "direction": [-0.05, -0.4, -0.35],
+    "magnitude": 0.13
   },
-"Top_Middle": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Third_Eye": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Skull_Corners": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nostril_Tops": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Tip": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Stem_Corners": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Smack_Dap_Middle": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Sides_Higher": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Sides": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Root": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Middle": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Corners_Below": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Corners_Above": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Bridge": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Nose_Bottom": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Mouth_Top_Corners": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Mid_Cheek": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Lower_Lip_Sides": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Lip_Top_Corners": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Lip_Top": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Lip_Bottom_of_Bottom": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Jowls": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Inner_Eyebrow_Crease": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Glasses_Rests_Top": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Glasses_Rests": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Funny_Mouth_Creases": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eyelid_tops": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"EyeLid_bottom_corners": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eyebrow_Under": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eyebrow_Ridge_Middle": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eyebrow_Inside_Corners": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eyebrow_Corners": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eyebrow_Arches": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eyebrow_Above": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eye_Lid_Bottoms": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Eye_Inner_Corners": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Chin_Contours": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Cheek_Middle": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Cheek_bones": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Cheek_Bone_Sides": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Cheek_Bone_Ridges": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
-  },
-"Below_Lips": {
-    "direction": [0, -0.5, -0.2],
-    "magnitude": 0.08
+  "Below_Lips": {
+    "direction": [0.1, -0.55, -0.25],
+    "magnitude": 0.09
   }
 }
-
