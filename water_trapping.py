@@ -10,17 +10,145 @@ from collections import deque
 import bmesh # For creating debug puddle mesh
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+import mathutils
 
-def is_point_inside_mesh(point, bvh, max_tests=12):
-    # Cast rays in several directions to reduce false negatives at surface edges
-    directions = [Vector((1,0,0)), Vector((0,1,0)), Vector((0,0,1)),
-                  Vector((-1,0,0)), Vector((0,-1,0)), Vector((0,0,-1))]
-    hits = 0
-    for dir in directions:
-        location, normal, index, distance = bvh.ray_cast(point, dir, 1e6)
-        if location is not None:
-            hits += 1
-    return hits % 2 == 1
+
+def remove_enclosed_water_pockets(final_trapped_water, is_solid, connectivity='6way'):
+    """
+    Remove water voxels that are completely enclosed within the structure
+    by flood-filling from the boundary inward.
+    
+    Args:
+        final_trapped_water: 3D boolean array of trapped water
+        is_solid: 3D boolean array of solid voxels
+        connectivity: '6way' (face-connected) or '26way' (face+edge+corner connected)
+    
+    Returns:
+        cleaned_water: 3D boolean array with enclosed pockets removed
+    """
+    nx, ny, nz = final_trapped_water.shape
+    
+    # Define connectivity (6-way = faces only, 26-way = all neighbors)
+    if connectivity == '6way':
+        deltas = [(-1,0,0), (1,0,0), (0,-1,0), (0,1,0), (0,0,-1), (0,0,1)]
+    else:  # 26-way connectivity
+        deltas = []
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                for dz in [-1, 0, 1]:
+                    if dx == 0 and dy == 0 and dz == 0:
+                        continue
+                    deltas.append((dx, dy, dz))
+    
+    # Step 1: Create a "floodable" space (water + empty space, not solid)
+    floodable = ~is_solid  # Everything that's not solid can be flooded
+    
+    # Step 2: Flood fill from all boundary voxels
+    visited = np.zeros_like(floodable, dtype=bool)
+    queue = deque()
+    
+    # Add all boundary voxels that are floodable to the queue
+    print("Starting flood fill from boundaries...")
+    
+    # Faces of the bounding box
+    for ix in range(nx):
+        for iy in range(ny):
+            for iz in [0, nz-1]:  # Top and bottom faces
+                if floodable[ix, iy, iz] and not visited[ix, iy, iz]:
+                    queue.append((ix, iy, iz))
+                    visited[ix, iy, iz] = True
+    
+    for ix in range(nx):
+        for iz in range(nz):
+            for iy in [0, ny-1]:  # Front and back faces
+                if floodable[ix, iy, iz] and not visited[ix, iy, iz]:
+                    queue.append((ix, iy, iz))
+                    visited[ix, iy, iz] = True
+    
+    for iy in range(ny):
+        for iz in range(nz):
+            for ix in [0, nx-1]:  # Left and right faces
+                if floodable[ix, iy, iz] and not visited[ix, iy, iz]:
+                    queue.append((ix, iy, iz))
+                    visited[ix, iy, iz] = True
+    
+    # Step 3: Flood fill inward
+    flood_count = 0
+    while queue:
+        cx, cy, cz = queue.popleft()
+        flood_count += 1
+        
+        # Check all neighbors
+        for dx, dy, dz in deltas:
+            nx_, ny_, nz_ = cx + dx, cy + dy, cz + dz
+            
+            # Skip if out of bounds
+            if not (0 <= nx_ < nx and 0 <= ny_ < ny and 0 <= nz_ < nz):
+                continue
+            
+            # If neighbor is floodable and not visited, add to queue
+            if floodable[nx_, ny_, nz_] and not visited[nx_, ny_, nz_]:
+                visited[nx_, ny_, nz_] = True
+                queue.append((nx_, ny_, nz_))
+    
+    print(f"Flood fill reached {flood_count} voxels")
+    
+    # Step 4: Keep only water voxels that were reached by flood fill
+    reachable_water = final_trapped_water & visited
+    
+    # Count how many water voxels were removed
+    original_water_count = np.sum(final_trapped_water)
+    final_water_count = np.sum(reachable_water)
+    removed_count = original_water_count - final_water_count
+    
+    print(f"Water cleanup: {original_water_count} -> {final_water_count} voxels")
+    print(f"Removed {removed_count} enclosed water voxels")
+    
+    return reachable_water
+
+
+def is_point_inside_mesh(point, bvh):
+    """
+    Test if a point is inside a mesh using ray casting.
+    Cast rays in multiple directions and use odd/even intersection counting.
+    """
+    
+    # Test multiple directions to handle edge cases
+    test_directions = [
+        mathutils.Vector((1, 0, 0)),
+        mathutils.Vector((0, 1, 0)), 
+        mathutils.Vector((0, 0, 1)),
+        mathutils.Vector((1, 1, 0)).normalized(),
+        mathutils.Vector((1, 0, 1)).normalized(),
+        mathutils.Vector((0, 1, 1)).normalized()
+    ]
+    
+    inside_votes = 0
+    
+    for direction in test_directions:
+        # Count intersections along this ray direction
+        intersections = 0
+        current_point = mathutils.Vector(point)
+        
+        # Cast ray and count all intersections
+        while True:
+            hit_location, hit_normal, face_index, distance = bvh.ray_cast(current_point, direction)
+            
+            if hit_location is None:
+                break  # No more intersections
+                
+            intersections += 1
+            # Move slightly past the intersection to continue
+            current_point = hit_location + direction * 0.001
+        
+        # Odd number of intersections = inside for this ray
+        if intersections % 2 == 1:
+            inside_votes += 1
+    
+    # Use majority vote (more than half the rays say "inside")
+    return inside_votes > len(test_directions) // 2
+
+
 
 
 def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create_debug_objects: bool = False, debug: bool = True) -> float:
@@ -108,7 +236,7 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
                 point = bbox_min + Vector((ix + 0.5, iy + 0.5, iz + 0.5)) * voxel_size
                 
                 if bvh.find_nearest(point):  # optional culling
-                    if not is_point_inside_mesh(point, bvh):
+                    if is_point_inside_mesh(point, bvh):
                         is_solid[ix, iy, iz] = True
                         # Turning of debug right now 
                         if debug and False:
@@ -118,6 +246,8 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
                             voxel.location = voxel_center
                             voxel.hide_set(False)
                             mesh_collection.objects.link(voxel)
+    
+    print('number of solid voxels:', sum(is_solid), 'ratio of total: ', sum(is_solid) / sum(dims))
 
     
     # TRYING SOMETHING now!
@@ -133,9 +263,6 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
         print(f'for slice {iz_slice} we have {slice_water_with_floor.sum()} candidates')
         if not np.any(slice_water_with_floor):
             continue  # Nothing to process in this slice
-        
-        # TODO: REMOVE
-#        final_trapped_water[:, :, iz_slice] = slice_water_with_floor
         
         # Track which water candidates have been visited
         visited = np.zeros((nx, ny), dtype=bool)
@@ -173,7 +300,7 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
                 is_section_trapped = True
                 
                 for wx, wy in water_section:
-                    # Check if this water voxel has any non-solid neighbors
+                    # Check if this water voxel has any neighbors that allow escape
                     for dx, dy in bfs_deltas_8way:
                         nx_, ny_ = wx + dx, wy + dy
                         
@@ -182,8 +309,12 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
                             is_section_trapped = False
                             break
                         
-                        # If neighbor is not solid and not part of this water section, water can escape
-                        if not current_slice_solid[nx_, ny_] and not slice_water_with_floor[nx_, ny_]:
+                        # Check what's at this neighbor position
+                        neighbor_is_solid = current_slice_solid[nx_, ny_]
+                        neighbor_is_water_candidate = slice_water_with_floor[nx_, ny_]
+                        
+                        # If neighbor is empty space (not solid, not water candidate), water can escape
+                        if not neighbor_is_solid and not neighbor_is_water_candidate:
                             is_section_trapped = False
                             break
                     
@@ -196,28 +327,31 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
                         slice_trapped_this_level[wx, wy] = True
         
         final_trapped_water[:, :, iz_slice] = slice_trapped_this_level
-#    
+
+    print('final trapped water (water that cant floww off):', sum(final_trapped_water), ' ratio of total: ', sum(final_trapped_water) / sum(dims))
+    cleaned_water = remove_enclosed_water_pockets(final_trapped_water, is_solid)
+#    cleaned_water = final_trapped_water
+    print('Cleaned water (water that is not fully enclosed): ', sum(cleaned_water), ' ratio of total: ', sum(cleaned_water) / sum(dims))
 
     if debug:
         bpy.ops.mesh.primitive_cube_add(size=voxel_size, location=(0, 0, 0))
-        voxel_prototype = bpy.context.object
-        voxel_prototype.name = "WATER_VOXELS"
+        water_voxel_prototype = bpy.context.object
+        water_voxel_prototype.name = "WATER_VOXELS"
         
         for ix in range(nx):
             for iy in range(ny):
                 for iz in range(nz):
-                    if final_trapped_water[ix, iy, iz]:
-                        print('we got in here?', ix, iy, 'THIS ONE IS Z', iz)
+                    if cleaned_water[ix, iy, iz]:
+#                        print('we got in here?', ix, iy, 'THIS ONE IS Z', iz)
                         voxel_center = bbox_min + Vector((ix + 0.5, iy + 0.5, iz + 0.5)) * voxel_size
-                        voxel = voxel_prototype.copy()
-                        voxel.data = voxel_prototype.data.copy()
+                        voxel = water_voxel_prototype.copy()
+                        voxel.data = water_voxel_prototype.data.copy()
                         voxel.location = voxel_center
                         voxel.hide_set(False)
                         mesh_collection.objects.link(voxel)
                         
-#    import pdb; pdb.set_trace()
     
-    print('hi ya')
+#    print('hi ya')
 
 
 # --- Example Usage ---
