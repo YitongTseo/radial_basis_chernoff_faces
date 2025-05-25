@@ -1,38 +1,36 @@
 import json
 import os
-import csv # NEW: For incremental CSV writing
+import csv
 import random
 import shutil
 import uuid
-import functools # For functools.partial
+import functools
 from deap import base, creator, tools, algorithms
-from utils import generate_face_mesh, run_blender_analysis # Assuming these are in utils.py
-
+from utils import generate_face_mesh, run_blender_analysis
 
 # --- Configuration ---
 BLENDER_EXECUTABLE_PATH = '/Applications/Blender.app/Contents/MacOS/Blender'
 GENERATION_HELPER_SCRIPT_PATH = 'blender_rbf_script.py'
 ANALYSIS_SCRIPT_PATH = 'water_trapping.py'
-BASE_INPUT_BLEND_FILE = 'face_landmark_points.blend'
+BASE_INPUT_BLEND_FILE = 'face_landmark_points.blend' # Used for Gen 0
 OBJECT_NAME_TO_ANALYZE = "Yitong_Face"
 ANALYSIS_VOXEL_SIZE = 0.05
 
-POPULATION_SIZE = 3  # Number of individuals in the population
-N_GENERATIONS = 2    # Number of generations to run
-CXPB = 0.0            # Crossover probability (not used as per request)
-MUTPB = 1.0           # Mutation probability for an individual
-MUTATION_SIGMA = 0.15 # Standard deviation for Gaussian mutation of genes
-MUTATION_INDPB = 0.1  # Independent probability for each gene to be mutated
-N_ELITES = 2          # Number of best individuals to carry over to the next generation unchanged
+POPULATION_SIZE = 3
+N_GENERATIONS = 2
+MUTPB = 1.0
+MUTATION_SIGMA = 0.15
+MUTATION_INDPB = 0.1
 FIXED_MAGNITUDE = 0.5
 FITNESS_WEIGHTS = (1.0, 0.2) # (Surface Area, Cupped Water Vol)
 
 # --- Landmark Definition ---
 try:
+    # Path changed by user in last provided script
     with open('example_params.json', 'r') as f:
         example_params_data = json.load(f)
 except FileNotFoundError:
-    print("Error: 'example_params.json' not found. Please ensure it's in the correct path.")
+    print("Error: 'example_params.json' not found. Please ensure it's in the current directory or update the path.")
     exit(1)
 
 LANDMARK_NAMES = [key for key in example_params_data.keys() if key != "default"]
@@ -42,14 +40,14 @@ TOTAL_NUM_GENES = len(LANDMARK_NAMES) * NUM_GENES_PER_LANDMARK
 print(f'We have this many genes: {TOTAL_NUM_GENES}')
 
 # --- Temporary Directory for EA files ---
-TEMP_DIR = "INDIVIDUALS_EVOLVING"
+TEMP_DIR = "INDIVIDUALS_EVOLVING" # Changed by user
 if os.path.exists(TEMP_DIR):
     shutil.rmtree(TEMP_DIR)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 # --- DEAP Setup ---
 creator.create("FitnessMultiMax", base.Fitness, weights=FITNESS_WEIGHTS)
-creator.create("Individual", list, fitness=creator.FitnessMultiMax)
+creator.create("Individual", list, fitness=creator.FitnessMultiMax) # Individuals are lists of genes
 
 toolbox = base.Toolbox()
 toolbox.register("attr_float", random.uniform, -1.0, 1.0)
@@ -72,12 +70,14 @@ def individual_to_params_json(individual_genes):
         gene_idx += 3
     return params_dict
 
-# MODIFIED: Evaluation function that logs data incrementally to CSV
-def evaluate_and_log_individual(individual_genes, current_generation_num, 
-                                detailed_log_list_in_memory, csv_writer_object, csv_file_handle): # Added csv_writer & file_handle
-    individual_id = str(uuid.uuid4())
+def evaluate_and_log_individual(
+    individual_genes, current_generation_num,
+    parent_individual_id_for_log, input_blend_for_this_eval, # Changed params
+    detailed_log_list_in_memory, csv_writer_object, csv_file_handle
+):
+    individual_id = str(uuid.uuid4()) # Unique ID for this new individual being evaluated
     param_filename = f"params_gen{current_generation_num}_{individual_id}.json"
-    blend_filename = f"output_gen{current_generation_num}_{individual_id}.blend"
+    blend_filename = f"output_gen{current_generation_num}_{individual_id}.blend" # Output of this eval
     
     params_json_path = os.path.join(TEMP_DIR, param_filename)
     generated_blend_path = os.path.join(TEMP_DIR, blend_filename)
@@ -86,181 +86,197 @@ def evaluate_and_log_individual(individual_genes, current_generation_num,
     with open(params_json_path, 'w') as f:
         json.dump(params_data, f, indent=2)
 
+    # Determine what parent_blend_file_to_log is. It's the input_blend_for_this_eval, but just filename part if it's not BASE
+    parent_blend_to_log_in_csv = os.path.basename(input_blend_for_this_eval) if input_blend_for_this_eval != BASE_INPUT_BLEND_FILE else BASE_INPUT_BLEND_FILE
+
     log_entry = {
         "generation": current_generation_num,
         "individual_id": individual_id,
-        "params_file": param_filename,
-        "blend_file": None,
-        "nx": None,
-        "ny": None,
-        "nz": None,
-        "solid_volume": None,
-        "trapped_water_vol": None,
-        "surface_area": None,
-        "cupped_water_vol": None,
-        "generation_status": "pending",
-        "analysis_status": "pending"
+        "parent_individual_id": parent_individual_id_for_log,
+        "parent_blend_file": parent_blend_to_log_in_csv, # Log which blend was its input
+        "params_file": param_filename, # Params file for this individual
+        "blend_file": None, # Output blend file of this individual
+        "nx": None, "ny": None, "nz": None, "solid_volume": None,
+        "trapped_water_vol": None, "surface_area": None, "cupped_water_vol": None,
+        "generation_status": "pending", "analysis_status": "pending",
+        "genes": str(list(individual_genes)), # Genes of this individual
     }
 
     success_generation = False
     try:
+        # Use the passed input_blend_for_this_eval
         success_generation = generate_face_mesh(
             blender_executable_path=BLENDER_EXECUTABLE_PATH,
             analyzer_script_path=GENERATION_HELPER_SCRIPT_PATH,
-            blend_file_to_open=BASE_INPUT_BLEND_FILE,
+            blend_file_to_open=input_blend_for_this_eval, # IMPORTANT: Use parent's output or base
             dither_config=params_json_path,
             output_file=generated_blend_path,
         )
     except Exception as e:
-        print(f"  Exception during generate_face_mesh for {individual_id}: {e}")
+        print(f"  Exception during generate_face_mesh for {individual_id} (using {os.path.basename(input_blend_for_this_eval)}): {e}")
         log_entry["generation_status"] = f"error: {e}"
 
     current_fitness = tuple(-float('inf') for _ in FITNESS_WEIGHTS)
 
     if not success_generation or not os.path.exists(generated_blend_path):
-        if success_generation and "generation_status" not in log_entry: # Error was not already set
+        if success_generation and log_entry["generation_status"] == "pending":
              log_entry["generation_status"] = "failed_no_output"
-        # Fall-through to logging and returning bad fitness
     else:
         log_entry["generation_status"] = "success"
-        log_entry["blend_file"] = blend_filename
+        log_entry["blend_file"] = blend_filename # This individual's output blend
 
         analysis_results = None
         try:
             analysis_results = run_blender_analysis(
                 blender_executable_path=BLENDER_EXECUTABLE_PATH,
                 analyzer_script_path=ANALYSIS_SCRIPT_PATH,
-                blend_file_to_open=generated_blend_path,
+                blend_file_to_open=generated_blend_path, # Analyze this individual's output
                 object_name_in_blend=OBJECT_NAME_TO_ANALYZE,
-                voxel_s=ANALYSIS_VOXEL_SIZE,
-                create_debug=False,
-                verbose_blender_output=False
+                voxel_s=ANALYSIS_VOXEL_SIZE, create_debug=False, verbose_blender_output=False
             )
         except Exception as e:
             print(f"  Exception during run_blender_analysis for {individual_id}: {e}")
             log_entry["analysis_status"] = f"error: {e}"
         
         if analysis_results is None:
-            if "analysis_status" not in log_entry: # Error was not already set
+            if log_entry["analysis_status"] == "pending":
                 log_entry["analysis_status"] = "failed_no_results"
-            # Fall-through to logging and returning bad fitness (already set)
         else:
             log_entry["analysis_status"] = "success"
-            surface_area = analysis_results.get('surface_area', 0)
-            cupped_water_vol = analysis_results.get('cupped_water_vol', 0)
-            log_entry["surface_area"] = surface_area
-            log_entry["cupped_water_vol"] = cupped_water_vol
-            log_entry['nx'] = analysis_results.get('nx', 0)
-            log_entry['ny'] = analysis_results.get('ny', 0)
-            log_entry['nz'] = analysis_results.get('nz', 0)
-            log_entry['trapped_water_vol'] = analysis_results.get('trapped_water_vol', 0)
-            log_entry['solid_volume'] = analysis_results.get('solid_volume', 0)
-            current_fitness = (surface_area, cupped_water_vol)
+            sa = analysis_results.get('surface_area', 0)
+            cwv = analysis_results.get('cupped_water_vol', 0)
+            log_entry.update({
+                "surface_area": sa, "cupped_water_vol": cwv,
+                'nx': analysis_results.get('nx'), 'ny': analysis_results.get('ny'),
+                'nz': analysis_results.get('nz'), 'trapped_water_vol': analysis_results.get('trapped_water_vol'),
+                'solid_volume': analysis_results.get('solid_volume')
+            })
+            current_fitness = (sa, cwv)
 
-    detailed_log_list_in_memory.append(log_entry) # Append to in-memory list
-    csv_writer_object.writerow(log_entry)      # Write to CSV file
-    csv_file_handle.flush()                    # Ensure it's written to disk
+    detailed_log_list_in_memory.append(log_entry)
+    csv_writer_object.writerow(log_entry)
+    csv_file_handle.flush()
     
     return current_fitness
 
 toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=MUTATION_SIGMA, indpb=MUTATION_INDPB)
 toolbox.register("select", tools.selNSGA2)
 
-# --- Main Evolutionary Loop ---
 def main():
-    print("Evolutionary Algorithm: Detailed Incremental Logging to CSV")
+    print("Evolutionary Algorithm: Accumulative Mutations & Detailed Logging")
     print(f"Output and logs will be in: {os.path.abspath(TEMP_DIR)}")
     print("---")
 
-    pop = toolbox.population(n=POPULATION_SIZE)
+    pop = toolbox.population(n=POPULATION_SIZE) # Current population
     hof = tools.ParetoFront()
-    stats = tools.Statistics(lambda ind: ind.fitness.values) # For generational summary
-    stats.register("avg", lambda x: tuple(round(sum(col) / len(col), 3) for col in zip(*x)) if x and all(isinstance(i,tuple) for i in x) else (None,None))
-    stats.register("min", lambda x: tuple(round(min(col), 3) for col in zip(*x)) if x and all(isinstance(i,tuple) for i in x) else (None,None))
-    stats.register("max", lambda x: tuple(round(max(col), 3) for col in zip(*x)) if x and all(isinstance(i,tuple) for i in x) else (None,None))
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", lambda x: tuple(round(sum(col)/len(col),3) for col in zip(*x)) if x and all(isinstance(i,tuple) and len(i)==len(FITNESS_WEIGHTS) for i in x) else tuple(None for _ in FITNESS_WEIGHTS))
+    stats.register("min", lambda x: tuple(round(min(col),3) for col in zip(*x)) if x and all(isinstance(i,tuple) and len(i)==len(FITNESS_WEIGHTS) for i in x) else tuple(None for _ in FITNESS_WEIGHTS))
+    stats.register("max", lambda x: tuple(round(max(col),3) for col in zip(*x)) if x and all(isinstance(i,tuple) and len(i)==len(FITNESS_WEIGHTS) for i in x) else tuple(None for _ in FITNESS_WEIGHTS))
     
     generational_summary_log = []
-    all_individuals_detailed_log_in_memory = [] # Still keep this for HOF and return
+    all_individuals_detailed_log_in_memory = []
 
-    # **NEW: Setup CSV file and writer**
     detailed_log_csv_path = os.path.join(TEMP_DIR, "all_individuals_evaluation_log.csv")
     csv_fieldnames = [
-        "generation",
-        "individual_id",
-        "params_file",
-        "blend_file",
-        "nx",
-        "ny",
-        "nz",
-        "solid_volume",
-        "trapped_water_vol",
-        "surface_area",
-        "cupped_water_vol",
-        "generation_status",
-        "analysis_status",
+        "generation", "individual_id", "parent_individual_id", "parent_blend_file",
+        "params_file", "blend_file", "nx", "ny", "nz", "solid_volume",
+        "trapped_water_vol", "surface_area", "cupped_water_vol",
+        "generation_status", "analysis_status", "genes",
     ]
 
-    with open(detailed_log_csv_path, 'a+', newline='') as csvfile_handle: # Open for append, create if not exists
+    with open(detailed_log_csv_path, 'a+', newline='') as csvfile_handle:
         csv_writer = csv.DictWriter(csvfile_handle, fieldnames=csv_fieldnames)
-        csvfile_handle.seek(0) # Go to the start of the file to check if empty
-        is_empty = not csvfile_handle.read(1) # Read one char to see if file is empty
+        csvfile_handle.seek(0)
+        is_empty = not csvfile_handle.read(1)
         if is_empty:
-            csvfile_handle.seek(0) # Go back to write header at the start
+            csvfile_handle.seek(0)
             csv_writer.writeheader()
-        # csvfile_handle will be flushed by evaluate_and_log_individual after each row.
 
-        # Evaluate the initial population (Generation 0)
+        # Generation 0
         print("Evaluating initial population (Generation 0)...")
-        eval_func_gen0 = functools.partial(evaluate_and_log_individual,
-                                           current_generation_num=0,
-                                           detailed_log_list_in_memory=all_individuals_detailed_log_in_memory,
-                                           csv_writer_object=csv_writer,
-                                           csv_file_handle=csvfile_handle) # Pass writer and file handle
-        toolbox.register("evaluate", eval_func_gen0)
-
-        invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-        for ind, fit in zip(invalid_ind, fitnesses):
-            ind.fitness.values = fit
+        for i, ind in enumerate(pop): # ind is a list of genes
+            if not ind.fitness.valid:
+                print(f"  Gen 0, Eval Ind {i+1}/{POPULATION_SIZE}")
+                ind.fitness.values = evaluate_and_log_individual(
+                    individual_genes=ind, current_generation_num=0,
+                    parent_individual_id_for_log="INITIAL",
+                    input_blend_for_this_eval=BASE_INPUT_BLEND_FILE,
+                    detailed_log_list_in_memory=all_individuals_detailed_log_in_memory,
+                    csv_writer_object=csv_writer, csv_file_handle=csvfile_handle
+                )
         
         hof.update(pop)
         record = stats.compile(pop)
         generational_summary_log.append({"gen": 0, **record})
         print(f"Generation 0 Summary: {record}")
-        print(f"Path to detailed CSV log: {os.path.abspath(detailed_log_csv_path)}")
+        print(f"Detailed CSV log: {os.path.abspath(detailed_log_csv_path)}")
 
-        # Evolution
+        # Subsequent Generations
         for gen in range(1, N_GENERATIONS + 1):
             print(f"\n--- Generation {gen}/{N_GENERATIONS} ---")
-            offspring = toolbox.select(pop, len(pop))
-            offspring = [toolbox.clone(ind) for ind in offspring]
-            for mutant in offspring:
-                if random.random() < MUTPB:
-                    toolbox.mutate(mutant)
-                    del mutant.fitness.values
+            
+            # Select parents from the previous generation's population (`pop`)
+            selected_parents = toolbox.select(pop, POPULATION_SIZE) # NSGA-II typical use
+            
+            # Create offspring for the new generation
+            offspring_population = []
 
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            print(f"Evaluating {len(invalid_ind)} new individuals for generation {gen}...")
-            eval_func_current_gen = functools.partial(evaluate_and_log_individual,
-                                                      current_generation_num=gen,
-                                                      detailed_log_list_in_memory=all_individuals_detailed_log_in_memory,
-                                                      csv_writer_object=csv_writer,
-                                                      csv_file_handle=csvfile_handle) # Pass writer and file handle
-            toolbox.register("evaluate", eval_func_current_gen)
+            print(f"  Generating and evaluating {POPULATION_SIZE} offspring for generation {gen}...")
+            for i in range(POPULATION_SIZE):
+                parent = selected_parents[i] # The parent chosen by selection
+                child_genes = toolbox.clone(parent) # Clone parent's genes for the child
+                
+                # Mutate the child's genes
+                if random.random() < MUTPB: # Assuming MUTPB is overall prob for individual
+                    toolbox.mutate(child_genes)
+                    del child_genes.fitness.values # Ensure re-evaluation
+
+                # Find the log entry of the ACTUAL parent to get its output blend file
+                parent_log_entry = next((entry for entry in reversed(all_individuals_detailed_log_in_memory)
+                                         if entry["genes"] == str(list(parent)) and # Match parent's genes
+                                            entry["generation"] == gen - 1 and  # From previous gen
+                                            entry["blend_file"] is not None and # Successfully created a blend
+                                            entry["generation_status"] == "success" and
+                                            entry["analysis_status"] == "success" # And was fully successful
+                                         ), None)
+
+                parent_id_for_child = "UNKNOWN_PARENT"
+                input_blend_for_child = BASE_INPUT_BLEND_FILE # Default fallback
+
+                if parent_log_entry:
+                    parent_id_for_child = parent_log_entry["individual_id"]
+                    # Construct full path to parent's output blend file
+                    parent_output_blend_filename = parent_log_entry["blend_file"]
+                    path_to_parent_output_blend = os.path.join(TEMP_DIR, parent_output_blend_filename)
+                    if os.path.exists(path_to_parent_output_blend):
+                        input_blend_for_child = path_to_parent_output_blend
+                    else:
+                        print(f"    WARNING: Parent's output blend file '{parent_output_blend_filename}' not found for child {i} of parent {parent_id_for_child}. Reverting to base file.")
+                else:
+                    print(f"    WARNING: Successful parent log entry not found for child {i} (parent genes: {str(list(parent))[:50]}...). Reverting to base file.")
+                
+                print(f"    Child {i+1}, Parent ID: {parent_id_for_child}, Using Input Blend: {os.path.basename(input_blend_for_child)}")
+                
+                # Evaluate the child
+                child_genes.fitness.values = evaluate_and_log_individual(
+                    individual_genes=child_genes, current_generation_num=gen,
+                    parent_individual_id_for_log=parent_id_for_child,
+                    input_blend_for_this_eval=input_blend_for_child,
+                    detailed_log_list_in_memory=all_individuals_detailed_log_in_memory,
+                    csv_writer_object=csv_writer, csv_file_handle=csvfile_handle
+                )
+                offspring_population.append(child_genes)
             
-            fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = fit
-            
-            pop[:] = offspring
+            pop[:] = offspring_population # New generation replaces old
             hof.update(pop)
             record = stats.compile(pop)
             generational_summary_log.append({"gen": gen, **record})
             print(f"Generation {gen} Summary: {record}")
-            print(f"Path to detailed CSV log: {os.path.abspath(detailed_log_csv_path)}")
+            print(f"Detailed CSV log: {os.path.abspath(detailed_log_csv_path)}")
 
-    # File is automatically closed when 'with' block exits
     print("\n--- Evolution Finished ---")
+    # ... (rest of the summary and HOF printing) ...
     print(f"Detailed incremental log saved to: {os.path.abspath(detailed_log_csv_path)}")
 
     summary_log_path = os.path.join(TEMP_DIR, "generational_summary_log.json")
@@ -273,19 +289,25 @@ def main():
 
     print(f"\nHall of Fame (Pareto Front) has {len(hof)} individuals.")
     for i, best_ind in enumerate(hof):
+        # Search HOF entry in the log using its unique ID if possible, or by fitness + genes
+        # For simplicity, we'll rely on the fitness and hope it's distinct enough along with genes
+        hof_ind_genes_str = str(list(best_ind)) 
         logged_entry_for_hof = next((item for item in all_individuals_detailed_log_in_memory 
-                                     if item["surface_area"] == best_ind.fitness.values[0] and 
-                                        item["cupped_water_vol"] == best_ind.fitness.values[1]), None)
+                                     if item["genes"] == hof_ind_genes_str and 
+                                        item.get("surface_area") == best_ind.fitness.values[0] and 
+                                        item.get("cupped_water_vol") == best_ind.fitness.values[1]), None)
         
         print(f"HOF Individual {i}: Fitness = {best_ind.fitness.values}")
         if logged_entry_for_hof:
-            print(f"  Params: {logged_entry_for_hof['params_file']}, Blend: {logged_entry_for_hof['blend_file']}")
+            print(f"  Individual ID: {logged_entry_for_hof['individual_id']}, Gen: {logged_entry_for_hof['generation']}")
+            print(f"  Params: {logged_entry_for_hof['params_file']}, Blend Output: {logged_entry_for_hof['blend_file']}")
+            print(f"  Parent ID: {logged_entry_for_hof['parent_individual_id']}, Parent Blend Input: {logged_entry_for_hof['parent_blend_file']}")
         else:
-            print(f"  Log entry for HOF individual {i} not found in in-memory list (genes might differ slightly due to float precision if re-evaluated).")
+            print(f"  (Log entry for HOF individual {i} not precisely matched in in-memory list by genes & fitness).")
 
 
     print(f"\nAll generated files and logs are in: '{os.path.abspath(TEMP_DIR)}'")
-    return pop, hof, all_individuals_detailed_log_in_memory # Return in-memory log too
+    return pop, hof, all_individuals_detailed_log_in_memory
 
 if __name__ == "__main__":
     final_pop, final_hof, in_memory_detailed_log = main()
