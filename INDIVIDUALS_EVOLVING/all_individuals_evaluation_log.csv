@@ -1,0 +1,10 @@
+generation,individual_id,params_file,blend_file,nx,ny,nz,solid_volume,trapped_water_vol,surface_area,cupped_water_vol,generation_status,analysis_status
+0,c9fd4d76-af2c-4fb6-bf66-5e4afef7ac27,params_gen0_c9fd4d76-af2c-4fb6-bf66-5e4afef7ac27.json,output_gen0_c9fd4d76-af2c-4fb6-bf66-5e4afef7ac27.blend,93,120,122,361712,5,236,243,success,success
+0,f54ff347-1d03-4817-81c8-8a91798e64ee,params_gen0_f54ff347-1d03-4817-81c8-8a91798e64ee.json,output_gen0_f54ff347-1d03-4817-81c8-8a91798e64ee.blend,94,112,133,358972,4,182,254,success,success
+0,88edffbf-b019-491c-bdc4-5cbddfd933b7,params_gen0_88edffbf-b019-491c-bdc4-5cbddfd933b7.json,output_gen0_88edffbf-b019-491c-bdc4-5cbddfd933b7.blend,99,112,129,349400,3,103,194,success,success
+1,3e081c1d-6c56-4e2b-b0a4-70d4ebee9cdb,params_gen1_3e081c1d-6c56-4e2b-b0a4-70d4ebee9cdb.json,output_gen1_3e081c1d-6c56-4e2b-b0a4-70d4ebee9cdb.blend,93,120,122,362252,7,210,211,success,success
+1,f4556cae-6b5f-42ad-9495-873eb33f8ed5,params_gen1_f4556cae-6b5f-42ad-9495-873eb33f8ed5.json,output_gen1_f4556cae-6b5f-42ad-9495-873eb33f8ed5.blend,94,112,133,361152,1,135,205,success,success
+1,1251b1b6-d8aa-4367-a20c-b9117297468b,params_gen1_1251b1b6-d8aa-4367-a20c-b9117297468b.json,output_gen1_1251b1b6-d8aa-4367-a20c-b9117297468b.blend,99,112,129,346944,12,67,112,success,success
+2,725eb1fd-1cd8-46a3-a1f8-e7b1464c3580,params_gen2_725eb1fd-1cd8-46a3-a1f8-e7b1464c3580.json,output_gen2_725eb1fd-1cd8-46a3-a1f8-e7b1464c3580.blend,93,119,122,359814,10,95,102,success,success
+2,85a978f8-6559-4add-9a43-f646c8e86e2b,params_gen2_85a978f8-6559-4add-9a43-f646c8e86e2b.json,output_gen2_85a978f8-6559-4add-9a43-f646c8e86e2b.blend,94,112,133,361692,2,148,223,success,success
+2,4e4a7b87-4e05-4756-ac7d-42a9a092ba72,params_gen2_4e4a7b87-4e05-4756-ac7d-42a9a092ba72.json,output_gen2_4e4a7b87-4e05-4756-ac7d-42a9a092ba72.blend,99,112,130,347534,12,63,105,success,success
