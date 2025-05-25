@@ -7,10 +7,11 @@ import numpy as np
 import mathutils
 import math
 from collections import deque
-import bmesh # For creating debug puddle mesh
+import bmesh
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
-import mathutils
+import sys
+import argparse # Added for command-line arguments
 
 
 def remove_enclosed_water_pockets(final_trapped_water, is_solid, connectivity='6way'):
@@ -148,10 +149,69 @@ def is_point_inside_mesh(point, bvh):
     # Use majority vote (more than half the rays say "inside")
     return inside_votes > len(test_directions) // 2
 
+def calculate_surface_area(water_voxels, is_solid, voxel_size):
+    """
+    Calculate the surface area of water voxels by counting exposed faces.
+    A water voxel face is exposed if it's adjacent to a non-water voxel 
+    (either empty space or solid).
+    
+    Args:
+        water_voxels: 3D boolean array of water voxels
+        is_solid: 3D boolean array of solid voxels  
+        voxel_size: Side length of each voxel
+        
+    Returns:
+        surface_area: Total surface area
+        surface_voxels: 3D boolean array marking which water voxels are at the surface
+    """
+    nx, ny, nz = water_voxels.shape
+    
+    # 6 face directions (up, down, left, right, front, back)
+    face_deltas = [(-1,0,0), (1,0,0), (0,-1,0), (0,1,0), (0,0,-1), (0,0,1)]
+    
+    surface_voxels = np.zeros_like(water_voxels, dtype=bool)
+    total_exposed_faces = 0
+    
+    # Check each water voxel
+    for ix in range(nx):
+        for iy in range(ny):
+            for iz in range(nz):
+                if not water_voxels[ix, iy, iz]:
+                    continue  # Skip non-water voxels
+                
+                exposed_faces = 0
+                is_surface_voxel = False
+                
+                # Check each of the 6 faces
+                for dx, dy, dz in face_deltas:
+                    nx_, ny_, nz_ = ix + dx, iy + dy, iz + dz
+                    
+                    # If we're at the boundary, this face is exposed
+                    if not (0 <= nx_ < nx and 0 <= ny_ < ny and 0 <= nz_ < nz):
+                        exposed_faces += 1
+                        is_surface_voxel = False
+                        continue
+                    
+                    # If the neighbor is not water, this face is exposed
+                    if not water_voxels[nx_, ny_, nz_] and not is_solid[nx_, ny_, nz_]:
+                        exposed_faces += 1
+                        is_surface_voxel = True
+                assert exposed_faces <= 1
+                
+                if is_surface_voxel:
+                    surface_voxels[ix, iy, iz] = True
+                    total_exposed_faces += exposed_faces
+    
+    # Each face has area = voxel_size^2
+    face_area = voxel_size * voxel_size
+    total_surface_area = total_exposed_faces * face_area
+    
+    return total_surface_area, surface_voxels
 
 
 
-def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create_debug_objects: bool = False, debug: bool = True) -> float:
+
+def get_enclosed_puddle_volume(target_obj_name: str, voxel_size: float , debug: bool = False) -> float:
     """
     Estimates water volume in puddles that are enclosed by solid walls on all
     horizontal sides and have a solid floor or are supported by other enclosed water below.
@@ -165,13 +225,14 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
                                      for the voxelized solid, trapped water, and bbox markers.
     Returns:
         float: The estimated total trapped_water volume in Blender units^3.
+        float: The total solid volume of the object
+        bbox_world,
     """
     target_obj = bpy.data.objects.get(target_obj_name)
     if not target_obj or target_obj.type != 'MESH':
         print(f"Error: Object '{target_obj_name}' not found or not a mesh.")
         return 0.0
 
-    # --- 1. Preparation: Duplicate and Remesh ---
     original_active = bpy.context.view_layer.objects.active
     original_selected = bpy.context.selected_objects[:]
 
@@ -179,19 +240,10 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
     for ob in bpy.data.objects: ob.select_set(False)
     target_obj.select_set(True)
     
-    # I got tired of the duplicate object, which seems to serve no use here...
-#    bpy.ops.object.duplicate()
-#    remesh_obj = bpy.context.active_object
-#    remesh_obj.name = target_obj_name + "_RemeshVoxelTemp"
     remesh_obj = bpy.context.active_object
-    
-    # Settings
-    voxel_size = 0.2  # in meters, 1 cm
     name = "Voxelized_Solid"
     mesh_collection = bpy.data.collections.new(name)
     bpy.context.scene.collection.children.link(mesh_collection)
-    
-    
 
     # Apply transformations so the bounding box is correct
     bpy.context.view_layer.objects.active = remesh_obj
@@ -201,13 +253,12 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
     bbox_world = [remesh_obj.matrix_world @ Vector(corner) for corner in remesh_obj.bound_box]
     bbox_min = Vector((min(v[i] for v in bbox_world) for i in range(3)))
     bbox_max = Vector((max(v[i] for v in bbox_world) for i in range(3)))
-    print(f"Bounding box: min={bbox_min}, max={bbox_max}")
+#    print(f"Bounding box: min={bbox_min}, max={bbox_max}")
 
     # Step 2: Define voxel grid
 #    import pdb; pdb.set_trace()
     float_vec = (bbox_max - bbox_min) / voxel_size
     dims = tuple(int(x) for x in float_vec)
-#    dims = ((bbox_max - bbox_min) / voxel_size).to_tuple(int)
     nx, ny, nz = dims
     print(f"Voxel grid: nx={nx}, ny={ny}, nz={nz}")
 
@@ -220,13 +271,11 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
     bm.faces.ensure_lookup_table()
     bvh = BVHTree.FromBMesh(bm)
     
-    # TODO: turn back on debug for later...
-    if debug and False:
-        bpy.ops.mesh.primitive_cube_add(size=voxel_size, location=(0, 0, 0))
-        voxel_prototype = bpy.context.object
-        voxel_prototype.name = "Voxel_Prototype"
-#        voxel_prototype.hide_render = True
-#        voxel_prototype.hide_viewport = True
+    # UNCOMMENT IF YOU WANT TO SEE THE MESH VOXELIZED
+#    if debug:
+#        bpy.ops.mesh.primitive_cube_add(size=voxel_size, location=(0, 0, 0))
+#        voxel_prototype = bpy.context.object
+#        voxel_prototype.name = "Voxel_Prototype"
 
 
     # Step 4: Fill the grid
@@ -238,16 +287,15 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
                 if bvh.find_nearest(point):  # optional culling
                     if is_point_inside_mesh(point, bvh):
                         is_solid[ix, iy, iz] = True
+                        # UNCOMMENT IF YOU WANT TO SEE THE MESH VOXELIZED
                         # Turning of debug right now 
-                        if debug and False:
-                            voxel_center = bbox_min + Vector((ix + 0.5, iy + 0.5, iz + 0.5)) * voxel_size
-                            voxel = voxel_prototype.copy()
-                            voxel.data = voxel_prototype.data.copy()
-                            voxel.location = voxel_center
-                            voxel.hide_set(False)
-                            mesh_collection.objects.link(voxel)
-    
-    print('number of solid voxels:', sum(is_solid), 'ratio of total: ', sum(is_solid) / sum(dims))
+#                        if debug:
+#                            voxel_center = bbox_min + Vector((ix + 0.5, iy + 0.5, iz + 0.5)) * voxel_size
+#                            voxel = voxel_prototype.copy()
+#                            voxel.data = voxel_prototype.data.copy()
+#                            voxel.location = voxel_center
+#                            voxel.hide_set(False)
+#                            mesh_collection.objects.link(voxel)
 
     
     # TRYING SOMETHING now!
@@ -328,30 +376,77 @@ def get_enclosed_puddle_volume(target_obj_name: str, octree_depth: float, create
         
         final_trapped_water[:, :, iz_slice] = slice_trapped_this_level
 
-    print('final trapped water (water that cant floww off):', sum(final_trapped_water), ' ratio of total: ', sum(final_trapped_water) / sum(dims))
+#    print('final trapped water (water that cant floww off):', sum(final_trapped_water), ' ratio of total: ', sum(final_trapped_water) / sum(dims))
     cleaned_water = remove_enclosed_water_pockets(final_trapped_water, is_solid)
 #    cleaned_water = final_trapped_water
-    print('Cleaned water (water that is not fully enclosed): ', sum(cleaned_water), ' ratio of total: ', sum(cleaned_water) / sum(dims))
+#    print('Cleaned water (water that is not fully enclosed): ', sum(cleaned_water), ' ratio of total: ', sum(cleaned_water) / sum(dims))
+
+#    if debug:
+#        bpy.ops.mesh.primitive_cube_add(size=voxel_size, location=(0, 0, 0))
+#        water_voxel_prototype = bpy.context.object
+#        water_voxel_prototype.name = "WATER_VOXELS"
+#        
+#        for ix in range(nx):
+#            for iy in range(ny):
+#                for iz in range(nz):
+#                    if cleaned_water[ix, iy, iz]:
+##                        print('we got in here?', ix, iy, 'THIS ONE IS Z', iz)
+#                        voxel_center = bbox_min + Vector((ix + 0.5, iy + 0.5, iz + 0.5)) * voxel_size
+#                        voxel = water_voxel_prototype.copy()
+#                        voxel.data = water_voxel_prototype.data.copy()
+#                        voxel.location = voxel_center
+#                        voxel.hide_set(False)
+#                        mesh_collection.objects.link(voxel)
+                        
+    surface_area, surface_voxels = calculate_surface_area(cleaned_water, is_solid, voxel_size)
 
     if debug:
         bpy.ops.mesh.primitive_cube_add(size=voxel_size, location=(0, 0, 0))
         water_voxel_prototype = bpy.context.object
         water_voxel_prototype.name = "WATER_VOXELS"
         
+        # Create a different colored prototype for surface voxels
+        bpy.ops.mesh.primitive_cube_add(size=voxel_size * 0.9, location=(0, 0, 0))  # Slightly smaller
+        surface_voxel_prototype = bpy.context.object
+        surface_voxel_prototype.name = "SURFACE_WATER_VOXELS"
+        
+        # Create materials for different voxel types
+        if not bpy.data.materials.get("WaterMaterial"):
+            water_mat = bpy.data.materials.new(name="WaterMaterial")
+            water_mat.use_nodes = True
+            water_mat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (0, 0.5, 1, 0.7)  # Blue
+            water_mat.node_tree.nodes["Principled BSDF"].inputs[21].default_value = 0.7  # Alpha
+        
+        if not bpy.data.materials.get("SurfaceWaterMaterial"):
+            surface_mat = bpy.data.materials.new(name="SurfaceWaterMaterial")
+            surface_mat.use_nodes = True
+            surface_mat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (1, 0.5, 0, 0.9)  # Orange
+            surface_mat.node_tree.nodes["Principled BSDF"].inputs[21].default_value = 0.9  # Alpha
+        
+        water_voxel_prototype.data.materials.append(bpy.data.materials["WaterMaterial"])
+        surface_voxel_prototype.data.materials.append(bpy.data.materials["SurfaceWaterMaterial"])
+    
+        water_voxel_prototype.data.materials.append(bpy.data.materials["WaterMaterial"])
+        surface_voxel_prototype.data.materials.append(bpy.data.materials["SurfaceWaterMaterial"])
+        
         for ix in range(nx):
             for iy in range(ny):
                 for iz in range(nz):
                     if cleaned_water[ix, iy, iz]:
-#                        print('we got in here?', ix, iy, 'THIS ONE IS Z', iz)
                         voxel_center = bbox_min + Vector((ix + 0.5, iy + 0.5, iz + 0.5)) * voxel_size
-                        voxel = water_voxel_prototype.copy()
-                        voxel.data = water_voxel_prototype.data.copy()
+                        
+                        # Choose prototype based on whether it's a surface voxel
+                        if surface_voxels[ix, iy, iz]:
+                            prototype = surface_voxel_prototype
+                        else:
+                            prototype = water_voxel_prototype
+                        
+                        voxel = prototype.copy()
+                        voxel.data = prototype.data.copy()
                         voxel.location = voxel_center
                         voxel.hide_set(False)
                         mesh_collection.objects.link(voxel)
-                        
-    
-#    print('hi ya')
+    return nx, ny, nz, sum(sum(sum(is_solid))), sum(sum(sum(final_trapped_water))) - sum(sum(sum(cleaned_water))), sum(sum(sum(cleaned_water))), sum(sum(sum(surface_voxels)))
 
 
 # --- Example Usage ---
@@ -370,17 +465,72 @@ if __name__ == "__main__":
         # It's highly recommended to apply scale to your object before running this
         # bpy.ops.object.transform_apply(location=False, rotation=False, scale=True) 
 
-        v_size = 0.1 
-        if original_obj.dimensions.length > 0:
-            avg_dim = sum(original_obj.dimensions) / 3.0 
-            auto_voxel_size = avg_dim / 30 # Coarser: 20-30, Finer: 50-100. Adjust for performance/detail.
-            if auto_voxel_size > 0.0001: v_size = auto_voxel_size
-            print(f"Auto-calculated voxel size: {v_size:.4f}")
-        else:
-            print(f"Object has zero dimensions. Using default voxel size: {v_size}")
-        
-        print(f"\n--- Calculating ENCLOSED Puddle Volume for: {original_obj.name} with Voxel Size: {v_size:.4f} ---")
-        estimated_volume = get_enclosed_puddle_volume(original_obj.name, 7, create_debug_objects=True)
-        #print(f"--- Finished. Final Estimated ENCLOSED Volume: {estimated_volume:.6f} ---")
+        v_size = 0.05
+        nx, ny, nz, solid_volume, trapped_water_vol, cupped_water_vol, surface_area = get_enclosed_puddle_volume(original_obj.name, voxel_size=v_size, debug=False)
+        print('nx ', nx, ' ny ', ny, ' nz ', nz, ' solid_volume ' , solid_volume, ' trapped_water_vol ' ,trapped_water_vol, ' cupped_water_vol ' ,cupped_water_vol, 'surface_area', surface_area)
     else:
         print(f"Object '{object_name_to_test}' not found.")
+
+
+
+# Helper to get script-specific arguments after '--'
+def get_blender_script_args():
+    try:
+        return sys.argv[sys.argv.index("--") + 1:]
+    except ValueError:
+        return []
+
+if __name__ == "__main__":
+    script_args = get_blender_script_args()
+
+    parser = argparse.ArgumentParser(description="Blender Headless Puddle Analyzer")
+    parser.add_argument("--blend_file", type=str, help="Path to the .blend file to open.")
+    parser.add_argument("--object_name", type=str, required=True, help="Name of the target Blender mesh object.")
+    parser.add_argument("--voxel_size", type=float, default=0.05, help="Voxel size for the calculation.")
+    parser.add_argument("--create_debug_meshes", action="store_true", help="Create debug mesh objects in the scene.")
+    parser.add_argument("--verbose", action="store_true", help="Print detailed messages to stdout during script execution.")
+
+    args = parser.parse_args(args=script_args)
+
+    if args.blend_file:
+        if args.verbose: print(f"Opening .blend file: {args.blend_file}")
+        try:
+            bpy.ops.wm.open_mainfile(filepath=args.blend_file)
+        except RuntimeError as e:
+            print(f"Error opening .blend file '{args.blend_file}': {e}")
+            sys.exit(1) # Exit if file cannot be opened
+
+    if bpy.context.object and bpy.context.object.mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode='OBJECT')
+    
+    # Automatically apply scale for the target object if it exists
+    target_obj_for_scale = bpy.data.objects.get(args.object_name)
+    if target_obj_for_scale:
+        if args.verbose: print(f"Ensuring object '{args.object_name}' is active and selected for pre-processing.")
+        current_active = bpy.context.view_layer.objects.active
+        selected_objects = bpy.context.selected_objects[:]
+        for o in bpy.data.objects: o.select_set(False)
+        target_obj_for_scale.select_set(True)
+        bpy.context.view_layer.objects.active = target_obj_for_scale
+        if args.verbose: print(f"Applying transformations for object '{args.object_name}'.")
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        # Restore selection
+        for o in bpy.data.objects: o.select_set(False)
+        for o in selected_objects: 
+            if o: o.select_set(True)
+        bpy.context.view_layer.objects.active = current_active
+    elif args.verbose:
+        print(f"Warning: Target object '{args.object_name}' not found before pre-processing. Calculation might fail or be incorrect.")
+
+    if args.verbose:
+        print(f"\n--- Calculating ENCLOSED Puddle Volume for: {args.object_name} with Voxel Size: {args.voxel_size:.4f} ---")
+    
+    nx, ny, nz, solid_volume_voxels, trapped_water_voxels, cupped_water_voxels, surface_area = get_enclosed_puddle_volume(
+        args.object_name, 
+        args.voxel_size, 
+        debug=False, # debug is not allowed!
+    )
+    print(f'nx {nx} ny {ny} nz {nz} solid_volume {solid_volume_voxels} trapped_water_vol {trapped_water_voxels} cupped_water_vol {cupped_water_voxels} surface_area {surface_area}')
+
+    if args.verbose: print("Blender script finished.")
+
