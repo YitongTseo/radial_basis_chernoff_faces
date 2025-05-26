@@ -1,0 +1,19 @@
+total_seq	328795270
+total_seq_mbp	329 Mb
+est_cov_raw	84.3
+est_cov	80.1
+genome_size	3899240
+genome_size_mbp	3.9
+longest_read	90501
+median_read	2491.0
+total_num_reads	68677
+rNG50	55026
+rN10	25910
+rN20	18932
+rN30	15272
+rN40	12259
+rN50	9808
+rN60	7831
+rN70	5983
+rN80	4261
+rN90	2396

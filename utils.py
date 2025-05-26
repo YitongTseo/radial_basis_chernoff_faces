@@ -11,6 +11,13 @@ def generate_face_mesh(
     output_file: str,
     timeout_seconds: int = 300 # 5 minutes
     ):
+    print(
+        blender_executable_path,
+        analyzer_script_path,
+        blend_file_to_open,
+        dither_config,
+        output_file
+    )
     """
     Runs the Blender puddle analysis script headlessly.
 

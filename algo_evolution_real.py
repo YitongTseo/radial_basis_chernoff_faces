@@ -16,7 +16,7 @@ BASE_INPUT_BLEND_FILE = 'face_landmark_points.blend' # Used for Gen 0
 OBJECT_NAME_TO_ANALYZE = "Yitong_Face"
 ANALYSIS_VOXEL_SIZE = 0.05
 
-POPULATION_SIZE = 3
+POPULATION_SIZE = 1
 N_GENERATIONS = 2
 MUTPB = 1.0
 MUTATION_SIGMA = 0.15
@@ -138,6 +138,10 @@ def evaluate_and_log_individual(
             print(f"  Exception during run_blender_analysis for {individual_id}: {e}")
             log_entry["analysis_status"] = f"error: {e}"
         
+        # # Now get rid of the .blend file to save space
+        # if os.path.exists(generated_blend_path):
+        #     os.remove(generated_blend_path)
+        
         if analysis_results is None:
             if log_entry["analysis_status"] == "pending":
                 log_entry["analysis_status"] = "failed_no_results"
@@ -252,7 +256,41 @@ def main():
                     if os.path.exists(path_to_parent_output_blend):
                         input_blend_for_child = path_to_parent_output_blend
                     else:
-                        print(f"    WARNING: Parent's output blend file '{parent_output_blend_filename}' not found for child {i} of parent {parent_id_for_child}. Reverting to base file.")
+                        # parent_vals = [vals for vals in all_individuals_detailed_log_in_memory if vals['blend_file'] in path_to_parent_output_blend][0]
+                        # generate_face_mesh(
+                        #     blender_executable_path=BLENDER_EXECUTABLE_PATH,
+                        #     analyzer_script_path=GENERATION_HELPER_SCRIPT_PATH,
+                        #     blend_file_to_open=parent_vals['parent_blend_file'], 
+                        #     dither_config="INDIVIDUALS_EVOLVING/" + parent_vals['params_file'],
+                        #     output_file="INDIVIDUALS_EVOLVING/" + parent_vals['blend_file'],
+                        # )
+
+                        # /Applications/Blender.app/Contents/MacOS/Blender 
+                        # blender_rbf_script.py 
+                        # INDIVIDUALS_EVOLVING/output_gen0_84c43045-3394-4696-ba05-8992d6dd22ef.blend 
+                        # INDIVIDUALS_EVOLVING/params_gen1_11c1ac1e-f56d-4282-acab-8511c1b09ac2.json 
+                        # INDIVIDUALS_EVOLVING/output_gen1_11c1ac1e-f56d-4282-acab-8511c1b09ac2.blend
+                        # /Applications/Blender.app/Contents/MacOS/Blender 
+                        # blender_rbf_script.py 
+                        # face_landmark_points.blend 
+                        # INDIVIDUALS_EVOLVING/params_gen0_84c43045-3394-4696-ba05-8992d6dd22ef.json 
+                        # INDIVIDUALS_EVOLVING/output_gen0_84c43045-3394-4696-ba05-8992d6dd22ef.blend
+                        # /Applications/Blender.app/Contents/MacOS/Blender 
+                        # blender_rbf_script.py 
+                        # face_landmark_points.blend 
+                        # INDIVIDUALS_EVOLVING/params_gen0_84c43045-3394-4696-ba05-8992d6dd22ef.json 
+                        # INDIVIDUALS_EVOLVING/output_gen0_84c43045-3394-4696-ba05-8992d6dd22ef.blend
+
+                        # /Applications/Blender.app/Contents/MacOS/Blender 
+                        # blender_rbf_script.py 
+                        # INDIVIDUALS_EVOLVING/output_gen1_11c1ac1e-f56d-4282-acab-8511c1b09ac2.blend 
+                        # INDIVIDUALS_EVOLVING/params_gen2_74923c15-768c-49e5-8290-8b06e45b0e8d.json 
+                        # INDIVIDUALS_EVOLVING/output_gen2_74923c15-768c-49e5-8290-8b06e45b0e8d.blend
+
+                        # input_blend_for_child = path_to_parent_output_blend
+                        # else:
+                        #     import pdb; pdb.set_trace()
+                        raise Exception(f"Parent's output blend file '{parent_output_blend_filename}' not found for child {i} of parent {parent_id_for_child}. Reverting to base file.")
                 else:
                     print(f"    WARNING: Successful parent log entry not found for child {i} (parent genes: {str(list(parent))[:50]}...). Reverting to base file.")
                 
@@ -267,6 +305,19 @@ def main():
                     csv_writer_object=csv_writer, csv_file_handle=csvfile_handle
                 )
                 offspring_population.append(child_genes)
+            
+            # fitness_vals = child_genes.fitness.values
+            # fittest_child_index = max(enumerate(fitness_vals), key=lambda x: x[1])[0]
+            # fittest_child_genes = offspring_population[fittest_child_index]
+            # fittest_child_vals = [vals for vals in all_individuals_detailed_log_in_memory if vals['genes'] == fittest_child_genes][0]
+            # # Recreate the fittest child's blender file
+            # success_generation = generate_face_mesh(
+            #     blender_executable_path=BLENDER_EXECUTABLE_PATH,
+            #     analyzer_script_path=GENERATION_HELPER_SCRIPT_PATH,
+            #     blend_file_to_open=fittest_child_vals['parent_blend_file'], 
+            #     dither_config=fittest_child_vals['params_file'],
+            #     output_file=fittest_child_vals['blend_file'],
+            # )
             
             pop[:] = offspring_population # New generation replaces old
             hof.update(pop)

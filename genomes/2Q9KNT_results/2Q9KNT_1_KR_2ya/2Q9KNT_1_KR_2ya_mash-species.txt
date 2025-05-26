@@ -1,0 +1,7 @@
+contig,identity,shared-hashes,median-multiplicity,p-value,query-ID,query-comment,contig_len,kmer_score,query-comment_short
+contig_1,0.989312,798/1000,1.0,0.0,GCF_000208635.1_ASM20863v1_genomic.fna.gz,"[64 seqs] NZ_AFCH01000064.1 Gluconacetobacter sp. SXCC-1 Contig992, whole genome shotgun sequence [...]","3,559,533",0.798, NZ_AFCH01000064.1 Gluconacetobacter sp. SXCC-1 Contig992
+contig_2,0.941502,282/1000,1.0,0.0,ref|NZ_CP004365.1|,"Gluconacetobacter xylinus E25 plasmid pGX5, complete sequence","217,004",0.282,Gluconacetobacter xylinus E25 plasmid pGX5
+contig_3,0.93855,264/1000,1.0,0.0,ref|NZ_CP004364.1|,"Gluconacetobacter xylinus E25 plasmid pGX4, complete sequence","54,652",0.264,Gluconacetobacter xylinus E25 plasmid pGX4
+contig_4,0.886148,79/1000,1.0,0.0,ref|NC_016028.1|,"Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA, complete sequence","20,416",0.079,Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA
+contig_5,0.886148,79/1000,2.0,0.0,ref|NC_016028.1|,"Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA, complete sequence","16,748",0.079,Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA
+contig_6,0.890712,88/1000,2.0,0.0,ref|NC_016028.1|,"Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA, complete sequence","30,876",0.088,Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA

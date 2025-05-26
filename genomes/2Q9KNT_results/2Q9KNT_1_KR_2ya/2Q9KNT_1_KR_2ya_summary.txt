@@ -1,0 +1,10 @@
+|                           |                |
+|:--------------------------|:---------------|
+| Total bp sequenced        | 328,795,270 bp |
+| Total number of reads     | 68,677 reads   |
+| Longest read              | 90,501 bp      |
+| Raw coverage              | 84x            |
+| Assembled coverage        | 79x            |
+| Genome size (Mb)          | 3.9 Mb         |
+| Number of contigs         | 6 contigs      |
+| Number of genes annotated | 3,612 genes    |

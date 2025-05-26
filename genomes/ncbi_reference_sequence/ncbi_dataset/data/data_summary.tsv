@@ -1,0 +1,3 @@
+Organism Scientific Name	Organism Common Name	Organism Qualifier	Taxonomy id	Assembly Name	Assembly Accession	Source	Annotation	Level	Contig N50	Size	Submission Date	Gene Count	BioProject	BioSample
+Komagataeibacter rhaeticus		strain: ENS 9a1a	215221	ASM1161152v1	GCA_011611525.1	GenBank	NCBI Prokaryotic Genome Annotation Pipeline (PGAP)	Complete Genome	3597563	3644828	2020-03-23	3401	PRJNA602409	SAMN13895132
+Komagataeibacter rhaeticus		strain: ENS 9a1a	215221	ASM1161152v1	GCF_011611525.1	RefSeq	GCF_011611525.1-RS_2024_12_16	Complete Genome	3597563	3644828	2020-03-23	3401	PRJNA602409	SAMN13895132

@@ -1,0 +1,16 @@
+contig,identity,shared-hashes,median-multiplicity,p-value,query-ID,query-comment,contig_len,kmer_score,query-comment_short
+contig_1,0.989489,801/1000,1.0,0.0,GCF_000208635.1_ASM20863v1_genomic.fna.gz,"[64 seqs] NZ_AFCH01000064.1 Gluconacetobacter sp. SXCC-1 Contig992, whole genome shotgun sequence [...]","3,573,982",0.801, NZ_AFCH01000064.1 Gluconacetobacter sp. SXCC-1 Contig992
+contig_11,,,,,,,"3,648",,
+contig_16,,,,,,,"17,906",,
+contig_18,0.85789,40/1000,1.0,5.4051100000000004e-291,ref|NZ_CP019879.1|,"Komagataeibacter nataicola strain RZS01 plasmid pKNA04, complete sequence","4,135",0.04,Komagataeibacter nataicola strain RZS01 plasmid pKNA04
+contig_19,0.999377,987/1000,1.0,0.0,ref|NC_016030.1|,"Komagataeibacter medellinensis NBRC 3288 plasmid pGXY070 DNA, complete sequence","2,266",0.987,Komagataeibacter medellinensis NBRC 3288 plasmid pGXY070 DNA
+contig_20,,,,,,,"17,614",,
+contig_22,0.886148,79/1000,1.0,0.0,ref|NC_016028.1|,"Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA, complete sequence","13,852",0.079,Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA
+contig_23,,,,,,,"6,071",,
+contig_24,0.939055,267/1000,2.0,0.0,ref|NZ_CP004364.1|,"Gluconacetobacter xylinus E25 plasmid pGX4, complete sequence","108,913",0.267,Gluconacetobacter xylinus E25 plasmid pGX4
+contig_3,0.875303,61/1000,1.0,0.0,ref|NZ_CP019879.1|,"Komagataeibacter nataicola strain RZS01 plasmid pKNA04, complete sequence","3,635",0.061,Komagataeibacter nataicola strain RZS01 plasmid pKNA04
+contig_4,0.890712,88/1000,1.0,0.0,ref|NC_016028.1|,"Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA, complete sequence","24,306",0.088,Komagataeibacter medellinensis NBRC 3288 plasmid pGXY030 DNA
+contig_5,,,,,,,"2,493",,
+contig_7,0.904677,122/1000,1.0,0.0,ref|NZ_CP004365.1|,"Gluconacetobacter xylinus E25 plasmid pGX5, complete sequence","79,888",0.122,Gluconacetobacter xylinus E25 plasmid pGX5
+contig_8,0.895289,98/1000,1.0,0.0,ref|NZ_CP004365.1|,"Gluconacetobacter xylinus E25 plasmid pGX5, complete sequence","52,425",0.098,Gluconacetobacter xylinus E25 plasmid pGX5
+contig_9,0.883393,74/1000,1.0,0.0,ref|NZ_CP019879.1|,"Komagataeibacter nataicola strain RZS01 plasmid pKNA04, complete sequence","24,829",0.074,Komagataeibacter nataicola strain RZS01 plasmid pKNA04
