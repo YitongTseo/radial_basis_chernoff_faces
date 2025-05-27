@@ -14,7 +14,7 @@ GENERATION_HELPER_SCRIPT_PATH = 'blender_rbf_script.py'
 ANALYSIS_SCRIPT_PATH = 'water_trapping.py'
 BASE_INPUT_BLEND_FILE = 'face_landmark_points.blend' # Used for Gen 0
 OBJECT_NAME_TO_ANALYZE = "Yitong_Face"
-ANALYSIS_VOXEL_SIZE = 0.05
+ANALYSIS_VOXEL_SIZE = 0.1
 
 POPULATION_SIZE = 1
 N_GENERATIONS = 2

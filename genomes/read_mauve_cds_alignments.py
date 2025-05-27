@@ -1,10 +1,10 @@
 from tqdm import tqdm
 import csv
 
-with open(r"genome_compare\compare_genes_by_similarity\ruh_moment.txt.alignments", "r") as f:
+with open(r"4way_ortholog.alignments", "r") as f:
     all_lines = f.readlines()
 
-output_csv = r"genome_compare\compare_genes_by_similarity\3_row_matches.csv"
+output_csv = r"4way_ortholog_by_row.csv"
 
 with open(output_csv, "w") as csvfile:
     writer = csv.writer(csvfile)
