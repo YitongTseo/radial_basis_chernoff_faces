@@ -7,6 +7,7 @@ import uuid
 import functools
 from deap import base, creator, tools, algorithms
 from utils import generate_face_mesh, run_blender_analysis
+import pandas as pd
 
 # --- Configuration ---
 BLENDER_EXECUTABLE_PATH = '/Applications/Blender.app/Contents/MacOS/Blender'
@@ -21,8 +22,8 @@ N_GENERATIONS = 2
 MUTPB = 1.0
 MUTATION_SIGMA = 0.15
 MUTATION_INDPB = 0.1
-FIXED_MAGNITUDE = 0.5
 FITNESS_WEIGHTS = (1.0, 0.2) # (Surface Area, Cupped Water Vol)
+GENE_MUTATION_MULTIPLIER = 5
 
 # --- Landmark Definition ---
 try:
@@ -38,6 +39,8 @@ DEFAULT_PARAMS_SECTION = example_params_data.get("default", {"direction": [0, 0,
 NUM_GENES_PER_LANDMARK = 3
 TOTAL_NUM_GENES = len(LANDMARK_NAMES) * NUM_GENES_PER_LANDMARK
 print(f'We have this many genes: {TOTAL_NUM_GENES}')
+GENOME_MUTATIONS_DF = pd.read_csv('genomes/most_variable_gene_mutations.csv')
+LANDMARK_TO_GENES_RANKING = pd.read_csv('landmark_ranking.csv', comment="#", header=None,)[0].to_list()
 
 # --- Temporary Directory for EA files ---
 TEMP_DIR = "INDIVIDUALS_EVOLVING" # Changed by user
@@ -54,7 +57,16 @@ toolbox.register("attr_float", random.uniform, -1.0, 1.0)
 toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, TOTAL_NUM_GENES)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-def individual_to_params_json(individual_genes):
+def individual_to_params_json(individual_genes, current_generation_num):
+    if current_generation_num == 0:
+        col_of_interest = "Reference->03.2020 Mutational Load"
+    elif current_generation_num == 1:
+        col_of_interest = "03.2020->09.2023 Mutational Load"
+    elif current_generation_num == 2:
+        col_of_interest = "09.2023->01.2025 Mutational Load"
+    else:
+        raise Exception('we only have 3 generations of changes worth of mutations')
+
     params_dict = {"default": DEFAULT_PARAMS_SECTION}
     gene_idx = 0
     for landmark_name in LANDMARK_NAMES:
@@ -63,9 +75,12 @@ def individual_to_params_json(individual_genes):
             max(-1.0, min(1.0, individual_genes[gene_idx + 1])),
             max(-1.0, min(1.0, individual_genes[gene_idx + 2])),
         ]
+        landmark_ranking = LANDMARK_TO_GENES_RANKING.index(landmark_name)
+        gene_of_interest = GENOME_MUTATIONS_DF.iloc[landmark_ranking]
+        generational_mutation_load = gene_of_interest[col_of_interest]
         params_dict[landmark_name] = {
             "direction": direction,
-            "magnitude": FIXED_MAGNITUDE
+            "magnitude": GENE_MUTATION_MULTIPLIER * generational_mutation_load,
         }
         gene_idx += 3
     return params_dict
@@ -82,7 +97,7 @@ def evaluate_and_log_individual(
     params_json_path = os.path.join(TEMP_DIR, param_filename)
     generated_blend_path = os.path.join(TEMP_DIR, blend_filename)
 
-    params_data = individual_to_params_json(individual_genes)
+    params_data = individual_to_params_json(individual_genes, current_generation_num)
     with open(params_json_path, 'w') as f:
         json.dump(params_data, f, indent=2)
 
