@@ -17,13 +17,14 @@ BASE_INPUT_BLEND_FILE = 'face_landmark_points.blend' # Used for Gen 0
 OBJECT_NAME_TO_ANALYZE = "Yitong_Face"
 ANALYSIS_VOXEL_SIZE = 0.1
 
-POPULATION_SIZE = 1
+POPULATION_SIZE = 300
 N_GENERATIONS = 2
 MUTPB = 1.0
 MUTATION_SIGMA = 0.15
 MUTATION_INDPB = 0.1
 FITNESS_WEIGHTS = (1.0, 0.2) # (Surface Area, Cupped Water Vol)
 GENE_MUTATION_MULTIPLIER = 5
+GENE_MUTATION_BASE_RATE = 0.08
 
 # --- Landmark Definition ---
 try:
@@ -80,7 +81,7 @@ def individual_to_params_json(individual_genes, current_generation_num):
         generational_mutation_load = gene_of_interest[col_of_interest]
         params_dict[landmark_name] = {
             "direction": direction,
-            "magnitude": GENE_MUTATION_MULTIPLIER * generational_mutation_load,
+            "magnitude": GENE_MUTATION_MULTIPLIER * generational_mutation_load + GENE_MUTATION_BASE_RATE,
         }
         gene_idx += 3
     return params_dict
@@ -368,6 +369,8 @@ def main():
             print(f"  Individual ID: {logged_entry_for_hof['individual_id']}, Gen: {logged_entry_for_hof['generation']}")
             print(f"  Params: {logged_entry_for_hof['params_file']}, Blend Output: {logged_entry_for_hof['blend_file']}")
             print(f"  Parent ID: {logged_entry_for_hof['parent_individual_id']}, Parent Blend Input: {logged_entry_for_hof['parent_blend_file']}")
+
+            print('grandparent: ', [individual['parent_blend_file'] for individual in all_individuals_detailed_log_in_memory if individual['individual_id'] == logged_entry_for_hof['parent_individual_id']])
         else:
             print(f"  (Log entry for HOF individual {i} not precisely matched in in-memory list by genes & fitness).")
 
