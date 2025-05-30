@@ -11,6 +11,7 @@ from utils import generate_face_mesh, run_blender_analysis
 import pandas as pd
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 import numpy as np
+import time
 
 # --- Configuration ---
 BLENDER_EXECUTABLE_PATH = '/Applications/Blender.app/Contents/MacOS/Blender'
@@ -231,6 +232,19 @@ def evaluate_and_log_individual(
     
     return current_fitness, log_entry # Return fitness and the log_entry dict
 
+def format_duration(seconds):
+    """Formats a duration in seconds into a human-readable string."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    if hours > 0:
+        return f"{hours}h {minutes}m {secs}s"
+    elif minutes > 0:
+        return f"{minutes}m {secs}s"
+    else:
+        return f"{secs}s"
+
+
 def main():
     global regeneration_cache
     regeneration_cache.clear()
@@ -411,6 +425,14 @@ def main():
     return hof, all_individuals_detailed_log_in_memory # Removed pop as it's not maintained in the old sense
 
 if __name__ == "__main__":
+    script_start_time = time.perf_counter()
+
     final_hof, final_in_memory_log = main() # Removed final_pop
     if final_in_memory_log:
         print(f"\nTotal {len(final_in_memory_log)} individual evaluations recorded in memory and CSV.")
+
+    script_end_time = time.perf_counter()
+    total_duration_seconds = script_end_time - script_start_time
+    
+    print(f"Script execution finished at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Total script execution time: {format_duration(total_duration_seconds)}")
