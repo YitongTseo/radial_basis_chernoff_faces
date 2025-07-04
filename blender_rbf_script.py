@@ -156,7 +156,7 @@ def get_args():
     # Optional parameters
     parser.add_argument('--output', type=str, default='output.blend', 
                         help='Path to output the modified .blend file')
-    parser.add_argument('--exempt_keywords', type=str, default='peripheral,inside,eyelid_tops',
+    parser.add_argument('--exempt_keywords', type=str, default='sparse_peripherals', 
                         help='Comma-separated list of keywords for vertex groups to exempt from dithering')
     parser.add_argument('--symmetry_threshold', type=float, default=0.01,
                         help='Threshold for considering vertices symmetric')
@@ -237,7 +237,7 @@ def main():
     # Get the face object - make sure it exists first
     face_obj = None
     for obj in bpy.data.objects:
-        if "Yitong_Face" in obj.name:
+        if "eyes_open_mask" in obj.name:
             face_obj = obj
             print(f"Found face object: {obj.name}")
             break
@@ -252,6 +252,7 @@ def main():
     bpy.ops.object.select_all(action='DESELECT')
     face_obj.select_set(True)
     bpy.context.view_layer.objects.active = face_obj
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     
     obj = face_obj
     mesh = obj.data
@@ -268,9 +269,9 @@ def main():
         raise ValueError(f"No vertex assigned to group '{name}'.")
     
     # Get the three points defining the symmetry plane
-    A = get_named_vertex("Nose_Smack_Dap_Middle")
-    B = get_named_vertex("Below_Lips")
-    C = get_named_vertex("Third_Eye")
+    A = get_named_vertex("Middle_Head")
+    B = get_named_vertex("Third_Eye")
+    C = get_named_vertex("Chin")
     
     # Calculate plane origin and normal
     plane_origin = A
