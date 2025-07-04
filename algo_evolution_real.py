@@ -4,14 +4,10 @@ import csv
 import random
 import shutil
 import uuid
-# import functools # No longer explicitly used by functools.partial
-from deap import base, creator, tools # Keep tools for ParetoFront, Statistics
-# from deap import algorithms # No longer using DEAP algorithms
+import functools
+from deap import base, creator, tools, algorithms
 from utils import generate_face_mesh, run_blender_analysis
 import pandas as pd
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-import numpy as np
-import time
 
 # --- Configuration ---
 BLENDER_EXECUTABLE_PATH = '/Applications/Blender.app/Contents/MacOS/Blender'
@@ -19,16 +15,17 @@ GENERATION_HELPER_SCRIPT_PATH = 'blender_rbf_script.py'
 ANALYSIS_SCRIPT_PATH = 'water_trapping.py'
 BASE_INPUT_BLEND_FILE = 'eyes_open_landmark.blend'
 OBJECT_NAME_TO_ANALYZE = "eyes_open_mask"
-ANALYSIS_VOXEL_SIZE = 0.1
+ANALYSIS_VOXEL_SIZE = 2.2
 
-POPULATION_SIZE = 300
+POPULATION_SIZE = 100
 N_GENERATIONS = 2
 MUTPB = 1.0
 MUTATION_SIGMA = 0.15
 MUTATION_INDPB = 0.1
 FITNESS_WEIGHTS = (1.0, 0.2) # (Surface Area, Cupped Water Vol)
-GENE_MUTATION_MULTIPLIER = 30
-GENE_MUTATION_BASE_RATE = 0.5
+GENE_MUTATION_MULTIPLIER = 80
+GENE_MUTATION_BASE_RATE = 0.8
+
 
 # --- Landmark Definition ---
 try:
